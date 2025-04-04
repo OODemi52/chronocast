@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChronoCast | Multi-Platform Streaming Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Configure Tailwind -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              200: '#ddd6fe',
+              300: '#c4b5fd',
+              400: '#a78bfa',
+              500: '#8b5cf6',
+              600: '#7c3aed',
+              700: '#6d28d9',
+              800: '#5b21b6',
+              900: '#4c1d95',
+              950: '#2e1065',
+            }
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+  <!-- HLS Support -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    /* Base styles */
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    /* Custom animations */
+    .fade-in { 
+      animation: fadeIn 0.5s ease-in-out; 
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+      border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 10px;
+    }
+    
+    .dark ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .dark ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Live indicator pulse */
+    .live-pulse {
+      position: relative;
+    }
+    
+    .live-pulse::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 10px;
+      height: 10px;
+      margin-top: -5px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+      
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+      }
+      
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+      }
+    }
+    
+    /* Platform button effects */
+    .platform-btn {
+      transition: all 0.2s ease;
+    }
+    
+    .platform-btn:hover {
+      transform: translateY(-2px);
+    }
+    
+    /* Custom card hover */
+    .card-hover {
+      transition: all 0.3s ease;
+    }
+    
+    .card-hover:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .dark .card-hover:hover {
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* Stream key code styling */
+    .stream-key-display {
+        font-family: 'Courier New', monospace;
+        letter-spacing: 0.5px;
+        white-space: nowrap; /* Prevent wrapping */
+        overflow: hidden; /* Prevent scrolling */
+        text-overflow: ellipsis; /* Add ellipsis if content overflows */
+        width: fit-content; /* Adjust width to fit content */
+        max-width: 100%; /* Prevent it from exceeding the container */
+        padding: 0.5rem 1rem; /* Add padding for better spacing */
+        background-color: #f3f4f6; /* Light gray background */
+        border-radius: 0.375rem; /* Rounded corners */
+        margin: auto; /* Center the box */
+        overflow: hidden; /* Disable scrollbars */
+    }
+    
+    /* Toggle switch styling */
+    .toggle-checkbox:checked {
+      right: 0;
+      border-color: #7c3aed;
+    }
+    
+    .toggle-checkbox:checked + .toggle-label {
+      background-color: #7c3aed;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen transition-colors duration-300">
+  <!-- Sidebar Navigation -->
+  <div class="flex h-screen overflow-hidden">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+      <div class="h-full flex flex-col">
+        <!-- Logo -->
+        <div class="flex items-center justify-center h-16 border-b border-gray-200 dark:border-gray-700">
+          <div class="flex items-center space-x-2">
+            <div class="bg-gradient-to-br from-primary-500 to-purple-600 p-2 rounded-lg">
+              <i class="fa-solid fa-video text-white text-xl"></i>
+            </div>
+            <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-purple-600">
+              ChronoCast
+            </h1>
+          </div>
+        </div>
+        
+        <!-- Navigation Links -->
+        <nav class="flex-1 overflow-y-auto py-4 px-3">
+          <ul class="space-y-2">
+            <li>
+              <a href="#dashboard" class="nav-link flex items-center px-4 py-3 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 group transition-colors">
+                <i class="fa-solid fa-gauge-high w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500 transition-colors"></i>
+                <span class="ml-3 font-medium">Dashboard</span>
+              </a>
+            </li>
+            <li>
+              <a href="#create-stream" class="nav-link flex items-center px-4 py-3 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 group transition-colors">
+                <i class="fa-solid fa-broadcast-tower w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500 transition-colors"></i>
+                <span class="ml-3 font-medium">Stream Now</span>
+              </a>
+            </li>
+            <li>
+              <a href="#schedule" class="nav-link flex items-center px-4 py-3 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 group transition-colors">
+                <i class="fa-solid fa-calendar-alt w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500 transition-colors"></i>
+                <span class="ml-3 font-medium">Schedule</span>
+              </a>
+            </li>
+            <li>
+              <a href="#analytics" class="nav-link flex items-center px-4 py-3 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 group transition-colors">
+                <i class="fa-solid fa-chart-line w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500 transition-colors"></i>
+                <span class="ml-3 font-medium">Analytics</span>
+              </a>
+            </li>
+            <li class="pt-2">
+              <div class="px-4 py-2 text-xs uppercase font-semibold text-gray-500 dark:text-gray-400">
+                Configuration
+              </div>
+            </li>
+            <li>
+              <a href="#auth-stream" class="nav-link flex items-center px-4 py-3 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 group transition-colors">
+                <i class="fa-solid fa-key w-5 h-5 text-gray-500 dark:text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-500 transition-colors"></i>
+                <span class="ml-3 font-medium">Auth & Stream Keys</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+        
+        <!-- Bottom Section -->
+        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center justify-between">
+            <!-- Dark Mode Toggle -->
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Light</span>
+              <div class="relative inline-block w-10 align-middle select-none">
+                <input type="checkbox" id="dark-toggle" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-2 appearance-none cursor-pointer" />
+                <label for="dark-toggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-300 cursor-pointer"></label>
+              </div>
+              <span class="text-xs font-medium text-gray-600 dark:text-gray-400">Dark</span>
+            </div>
+            
+            <!-- Profile Button -->
+            <button id="profile-btn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+              <i class="fa-solid fa-user-circle text-gray-600 dark:text-gray-300 text-xl"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+    
+    <!-- Mobile Header -->
+    <div class="md:hidden fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-md">
+      <div class="flex items-center justify-between h-16 px-4">
+        <button id="mobile-menu-btn" class="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none">
+          <i class="fa-solid fa-bars text-xl"></i>
+        </button>
+        <div class="flex items-center space-x-2">
+          <div class="bg-gradient-to-br from-primary-500 to-purple-600 p-1.5 rounded-lg">
+            <i class="fa-solid fa-video text-white text-lg"></i>
+          </div>
+          <h1 class="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-500 to-purple-600">
+            ChronoCast
+          </h1>
+        </div>
+        <button id="mobile-profile-btn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+          <i class="fa-solid fa-user-circle text-gray-600 dark:text-gray-300 text-xl"></i>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-x-hidden overflow-y-auto md:ml-64 pt-16 md:pt-0">
+      <div class="container mx-auto px-4 py-8">
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="mb-12 fade-in space-y-8">
+          <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6">
+            <div>
+              <h1 class="text-2xl font-bold">Welcome to ChronoCast</h1>
+              <p class="text-gray-600 dark:text-gray-400 mt-1">Your multi-platform streaming command center</p>
+            </div>
+            <div class="mt-4 md:mt-0">
+              <button id="quick-stream-btn" class="bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 text-white font-medium py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition-all">
+                <i class="fa-solid fa-broadcast-tower mr-2"></i>Quick Stream
+              </button>
+            </div>
+          </div>
+          
+          <!-- Status Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Authenticated Platforms -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 card-hover">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Connected Platforms</p>
+                  <h3 class="text-3xl font-bold mt-2" id="connected-count">1</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    <span class="text-green-500 font-medium"><i class="fa-solid fa-circle-check mr-1"></i>YouTube</span>
+                  </p>
+                </div>
+                <div class="bg-primary-50 dark:bg-primary-900/30 p-3 rounded-lg">
+                  <i class="fa-solid fa-plug-circle-check text-primary-500 dark:text-primary-400 text-xl"></i>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Active Streams -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 card-hover">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Active Streams</p>
+                  <h3 class="text-3xl font-bold mt-2" id="active-streams">0</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">No active streams</p>
+                </div>
+                <div class="bg-green-50 dark:bg-green-900/30 p-3 rounded-lg">
+                  <i class="fa-solid fa-tower-broadcast text-green-500 dark:text-green-400 text-xl"></i>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Scheduled Streams -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 card-hover">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Scheduled Streams</p>
+                  <h3 class="text-3xl font-bold mt-2" id="scheduled-streams">0</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">None upcoming</p>
+                </div>
+                <div class="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg">
+                  <i class="fa-solid fa-calendar-days text-blue-500 dark:text-blue-400 text-xl"></i>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Stream Key Status -->
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 card-hover">
+              <div class="flex items-start justify-between">
+                <div>
+                  <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Stream Key</p>
+                  <h3 class="text-2xl font-bold mt-2" id="key-status">Not Generated</h3>
+                  <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    <a href="#auth-stream" class="text-primary-500 hover:underline">Generate now</a>
+                  </p>
+                </div>
+                <div class="bg-amber-50 dark:bg-amber-900/30 p-3 rounded-lg">
+                  <i class="fa-solid fa-key text-amber-500 dark:text-amber-400 text-xl"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Quick Links -->
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 class="text-lg font-semibold mb-4">Quick Links</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <a href="#create-stream" class="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                <i class="fa-solid fa-broadcast-tower text-primary-500 dark:text-primary-400 text-2xl mb-2"></i>
+                <span class="text-sm font-medium">New Stream</span>
+              </a>
+              <a href="#schedule" class="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                <i class="fa-solid fa-calendar-plus text-blue-500 dark:text-blue-400 text-2xl mb-2"></i>
+                <span class="text-sm font-medium">Schedule</span>
+              </a>
+              <a href="#analytics" class="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                <i class="fa-solid fa-chart-line text-green-500 dark:text-green-400 text-2xl mb-2"></i>
+                <span class="text-sm font-medium">Analytics</span>
+              </a>
+              <a href="#auth-stream" class="flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                <i class="fa-solid fa-gear text-gray-500 dark:text-gray-400 text-2xl mb-2"></i>
+                <span class="text-sm font-medium">Settings</span>
+              </a>
+            </div>
+          </div>
+        </section>
+        
+        <!-- Authentication & Stream Key Section -->
+        <section id="auth-stream" class="mb-12 fade-in">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
+              <h2 class="text-xl font-semibold">Authentication & Stream Keys</h2>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Connect your platforms and manage your stream keys</p>
+            </div>
+            
+            <div class="p-6 space-y-8">
+              <!-- Platform Authentication -->
+              <div>
+                <h3 class="text-lg font-medium mb-4">Platform Authentication</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <!-- YouTube -->
+                  <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center">
+                        <i class="fab fa-youtube text-red-500 text-2xl mr-3"></i>
+                        <h4 class="font-medium">YouTube</h4>
+                      </div>
+                      <div id="yt-auth-status" class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200">
+                        Checking...
+                      </div>
+                    </div>
+                    <a href="http://localhost:8080/auth/login/youtube?platform=youtube" 
+                       class="block w-full text-center bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors">
+                      <i class="fab fa-youtube mr-2"></i> Connect
+                    </a>
+                  </div>
+                  
+                  <!-- Twitch -->
+                  <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center">
+                        <i class="fab fa-twitch text-purple-500 text-2xl mr-3"></i>
+                        <h4 class="font-medium">Twitch</h4>
+                      </div>
+                      <div class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200">
+                        Not Connected
+                      </div>
+                    </div>
+                    <button class="block w-full text-center bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded-lg transition-colors">
+                      <i class="fab fa-twitch mr-2"></i> Connect
+                    </button>
+                  </div>
+                  
+                  <!-- Facebook -->
+                  <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center">
+                        <i class="fab fa-facebook text-blue-600 text-2xl mr-3"></i>
+                        <h4 class="font-medium">Facebook</h4>
+                      </div>
+                      <div class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200">
+                        Not Connected
+                      </div>
+                    </div>
+                    <button class="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors">
+                      <i class="fab fa-facebook mr-2"></i> Connect
+                    </button>
+                  </div>
+                </div>
+                <div class="mt-4 flex justify-end">
+                  <button class="text-sm text-primary-600 dark:text-primary-400 hover:underline">
+                    <i class="fa-solid fa-plus mr-1"></i> Add more platforms
+                  </button>
+                </div>
+              </div>
+              
+              <hr class="border-gray-200 dark:border-gray-700">
+              
+              <!-- Stream Key Management -->
+              <div>
+                <h3 class="text-lg font-medium mb-4">Stream Key Management</h3>
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 border border-gray-200 dark:border-gray-600">
+                  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <p class="text-sm font-medium mb-1">Your ChronoCast Stream Key</p>
+                      <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 md:mb-0">Use this in your broadcasting software (OBS, Streamlabs, etc.)</p>
+                    </div>
+                    <button id="generate-key" class="shrink-0 bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+                      Generate Stream Key
+                    </button>
+                  </div>
+                  
+                  <div id="generated-stream-key" class="mt-6"></div>
+                  
+                  <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <p class="text-sm font-medium mb-1">RTMP Ingest URL</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 md:mb-0">Use this in your broadcasting software along with your stream key</p>
+                      </div>
+                        <div class="shrink-0 bg-gray-200 dark:bg-gray-600 px-4 py-2 rounded-lg stream-key-display">
+                            rtmp://localhost:1935/live <!--FIXME - Configure for production server ingestion URL-->
+                          </div>
+                          <button id="copy-ingest-url" class="px-3 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-lg transition-colors">
+                            <i class="fa-regular fa-copy"></i> Copy
+                        </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <!-- Create Stream Section -->
+        <section id="create-stream" class="mb-12 fade-in">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
+              <h2 class="text-xl font-semibold">Create Stream</h2>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Set up and start your multi-platform stream</p>
+            </div>
+            
+            <div class="p-6">
+              <form id="stream-form" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stream Title</label>
+                    <input type="text" id="title" placeholder="Enter a catchy title for your stream" class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 transition-colors" required>
+                  </div>
+                  
+                  <div>
+                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stream Status</label>
+                    <div class="flex items-center space-x-1">
+                      <span class="shrink-0 w-3 h-3 bg-gray-400 dark:bg-gray-500 rounded-full"></span>
+                      <span class="text-sm text-gray-500 dark:text-gray-400">Offline</span>
+                      <span class="text-xs text-gray-400 dark:text-gray-500 ml-2">(Stream key required)</span>
+                    </div>
+                  </div>
+                  
+                  <div class="md:col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description</label>
+                    <textarea id="description" rows="4" placeholder="Describe what your stream is about..." class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 focus:border-primary-500 dark:focus:ring-primary-400 dark:focus:border-primary-400 transition-colors"></textarea>
+                  </div>
+                </div>
+                
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Streaming Destinations</label>
+                  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    <!-- YouTube -->
+                    <div class="platform-btn bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-300 dark:border-gray-600 hover:border-red-500 dark:hover:border-red-500 cursor-pointer">
+                      <div class="flex flex-col items-center justify-center space-y-3">
+                        <i class="fab fa-youtube text-red-500 text-3xl"></i>
+                        <span class="text-sm font-medium">YouTube</span>
+                        <div class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200">
+                          Checking...
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Twitch -->
+                    <div class="platform-btn bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-600 hover:border-purple-500 dark:hover:border-purple-500 cursor-pointer opacity-50">
+                      <div class="flex flex-col items-center justify-center space-y-3">
+                        <i class="fab fa-twitch text-purple-500 text-3xl"></i>
+                        <span class="text-sm font-medium">Twitch</span>
+                        <div class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200">
+                          Not Connected
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Facebook -->
+                    <div class="platform-btn bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-200 dark:border-gray-600 hover:border-blue-600 dark:hover:border-blue-600 cursor-pointer opacity-50">
+                      <div class="flex flex-col items-center justify-center space-y-3">
+                        <i class="fab fa-facebook text-blue-600 text-3xl"></i>
+                        <span class="text-sm font-medium">Facebook</span>
+                        <div class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200">
+                          Not Connected
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Add More -->
+                    <div class="platform-btn bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 border-dashed border-gray-300 dark:border-gray-500 hover:border-primary-500 dark:hover:border-primary-400 cursor-pointer">
+                      <div class="flex flex-col items-center justify-center space-y-3">
+                        <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                          <i class="fa-solid fa-plus text-gray-500 dark:text-gray-400 text-xl"></i>
+                        </div>
+                        <span class="text-sm font-medium">Add More</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="space-y-2">
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">Stream Options</label>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-center space-x-3">
+                      <input type="checkbox" id="enable-chat" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+                      <label for="enable-chat" class="text-sm font-medium text-gray-700 dark:text-gray-300">Enable Chat Integration</label>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                      <input type="checkbox" id="auto-record" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+                      <label for="auto-record" class="text-sm font-medium text-gray-700 dark:text-gray-300">Auto Record Stream</label>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                      <input type="checkbox" id="low-latency" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+                      <label for="low-latency" class="text-sm font-medium text-gray-700 dark:text-gray-300">Low Latency Mode</label>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                      <input type="checkbox" id="notify-followers" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-800 dark:bg-gray-700 dark:border-gray-600">
+                      <label for="notify-followers" class="text-sm font-medium text-gray-700 dark:text-gray-300">Notify Followers</label>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="pt-4 flex justify-end space-x-3">
+                  <button type="button" id="test-stream" class="bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium py-2 px-6 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm transition-colors">
+                    Test Stream
+                  </button>
+                  <button type="submit" id="start-stream" class="bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 text-white font-medium py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition-all">
+                    <i class="fa-solid fa-broadcast-tower mr-2"></i>Go Live
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </section>
+        
+        <!-- HLS Playback -->
+        <section id="stream-preview" class="mb-12 fade-in hidden">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+              <div>
+                <h2 class="text-xl font-semibold">Stream Preview</h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Watch your active stream</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <div class="live-pulse pl-5">
+                  <span class="ml-2 text-red-500 font-medium">LIVE</span>
+                </div>
+                <span class="text-sm text-gray-500 dark:text-gray-400" id="stream-viewers">0 viewers</span>
+              </div>
+            </div>
+            
+            <div class="p-6">
+              <div class="mx-auto max-w-3xl">
+                <div class="bg-gray-800 rounded-lg overflow-hidden">
+                  <video id="stream-player" controls playsinline style="width: 100%;" poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1920 1080' fill='none'%3E%3Crect width='1920' height='1080' fill='%23111827'/%3E%3Cpath d='M960 540C960 540 960 540 960 540C960 540 960 540 960 540C960 540 960 540 960 540Z' fill='%234B5563'/%3E%3Ctext x='960' y='540' font-family='system-ui' font-size='32' text-anchor='middle' fill='%236B7280'%3EWaiting for stream...%3C/text%3E%3C/svg%3E"></video>
+                </div>
+                
+                <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h3 class="text-lg font-medium mb-2" id="stream-preview-title">Stream Title</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400" id="stream-preview-description">Stream description will appear here when live.</p>
+                  </div>
+                  
+                  <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h3 class="text-lg font-medium mb-2">Stream Information</h3>
+                    <div class="space-y-2">
+                      <div class="flex justify-between">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Stream Key:</span>
+                        <span class="text-sm font-mono" id="stream-preview-key">-</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Quality:</span>
+                        <span class="text-sm" id="stream-quality">Auto</span>
+                      </div>
+                      <div class="flex justify-between">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">Platforms:</span>
+                        <div id="stream-platforms" class="flex space-x-1">
+                          <i class="fab fa-youtube text-red-500 text-sm"></i>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="mt-6 flex justify-end space-x-3">
+                  <button id="copy-stream-url" class="bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium py-2 px-6 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm transition-colors">
+                    <i class="fa-regular fa-copy mr-2"></i>Copy Stream URL
+                  </button>
+                  <button id="share-stream" class="bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 text-white font-medium py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition-all">
+                    <i class="fa-solid fa-share-nodes mr-2"></i>Share Stream
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <!-- Schedule Section -->
+        <section id="schedule" class="mb-12 fade-in">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
+              <h2 class="text-xl font-semibold">Schedule Streams</h2>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Plan and schedule your upcoming streams</p>
+            </div>
+            
+            <div class="p-6">
+              <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-6">
+                <!-- Calendar View -->
+                <div class="w-full md:w-2/3 bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-medium">April 2025</h3>
+                    <div class="flex space-x-2">
+                      <button class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <i class="fa-solid fa-chevron-left text-gray-600 dark:text-gray-400"></i>
+                      </button>
+                      <button class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        <i class="fa-solid fa-chevron-right text-gray-600 dark:text-gray-400"></i>
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div class="grid grid-cols-7 gap-1 text-center text-sm font-medium mb-2">
+                    <div>Sun</div>
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
+                  </div>
+                  
+                  <div class="grid grid-cols-7 gap-1">
+                    <!-- Previous Month -->
+                    <div class="aspect-square flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">31</div>
+                    <!-- Current Month -->
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">1</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">2</div>
+                    <div class="aspect-square flex items-center justify-center text-sm bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-bold rounded-lg relative cursor-pointer">
+                      3
+                      <span class="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-primary-500 rounded-full"></span>
+                    </div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">4</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">5</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">6</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">7</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">8</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">9</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">10</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer relative">
+                      11
+                      <span class="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-green-500 rounded-full"></span>
+                    </div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">12</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">13</div>
+                    <!-- Continue for remaining days -->
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">14</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">15</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">16</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">17</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer relative">
+                      18
+                      <span class="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-500 rounded-full"></span>
+                    </div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">19</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">20</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">21</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">22</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">23</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">24</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">25</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">26</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">27</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">28</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">29</div>
+                    <div class="aspect-square flex items-center justify-center text-sm hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg cursor-pointer">30</div>
+                    <!-- Next Month -->
+                    <div class="aspect-square flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">1</div>
+                    <div class="aspect-square flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">2</div>
+                    <div class="aspect-square flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">3</div>
+                    <div class="aspect-square flex items-center justify-center text-sm text-gray-400 dark:text-gray-500">4</div>
+                  </div>
+                </div>
+                
+                <!-- Schedule Form -->
+                <div class="w-full md:w-1/3">
+                  <button id="new-schedule-btn" class="w-full bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700 text-white font-medium py-2 px-6 rounded-lg shadow-md hover:shadow-lg transition-all mb-4">
+                    <i class="fa-solid fa-calendar-plus mr-2"></i> Schedule New Stream
+                  </button>
+                  
+                  <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+                    <h4 class="font-medium mb-3">Upcoming Streams</h4>
+                    <div class="space-y-3">
+                      <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div class="flex justify-between items-start">
+                          <div>
+                            <h5 class="font-medium">Weekly Dev Update</h5>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Friday, Apr 11 · 3:00 PM</p>
+                          </div>
+                          <div class="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full text-xs font-medium text-green-800 dark:text-green-200">
+                            Scheduled
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                          <i class="fab fa-youtube text-red-500 text-sm"></i>
+                          <i class="fab fa-twitch text-purple-500 text-sm opacity-50"></i>
+                        </div>
+                      </div>
+                      
+                      <div class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+                        <div class="flex justify-between items-start">
+                          <div>
+                            <h5 class="font-medium">Monthly Q&A Session</h5>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Friday, Apr 18 · 7:00 PM</p>
+                          </div>
+                          <div class="bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded-full text-xs font-medium text-blue-800 dark:text-blue-200">
+                            Draft
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                          <i class="fab fa-youtube text-red-500 text-sm"></i>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                      No more scheduled streams
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        
+        <!-- Analytics Section -->
+        <section id="analytics" class="mb-12 fade-in">
+          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <div class="px-6 py-5 border-b border-gray-200 dark:border-gray-700">
+              <h2 class="text-xl font-semibold">Analytics</h2>
+              <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">Track your streaming performance</p>
+            </div>
+            
+            <div class="p-6">
+              <div class="text-center py-16">
+                <div class="w-24 h-24 mx-auto bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
+                  <i class="fa-solid fa-chart-line text-gray-400 dark:text-gray-500 text-3xl"></i>
+                </div>
+                <h3 class="text-lg font-medium mb-2">No Analytics Data Yet</h3>
+                <p class="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                  Start streaming to begin collecting analytics data across all your platforms.
+                </p>
+                <div class="mt-6">
+                  <a href="#create-stream" class="inline-flex items-center justify-center py-2 px-6 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transition-all">
+                    <i class="fa-solid fa-broadcast-tower mr-2"></i> Start Your First Stream
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+  
+  <!-- JavaScript -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Dark Mode Toggle
+      const darkToggle = document.getElementById('dark-toggle');
+      const htmlElement = document.documentElement;
+      
+      // Check for saved theme preference
+      if (localStorage.getItem('color-theme') === 'dark' || 
+          (!localStorage.getItem('color-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        htmlElement.classList.add('dark');
+        darkToggle.checked = true;
+      } else {
+        htmlElement.classList.remove('dark');
+        darkToggle.checked = false;
+      }
+      
+      // Toggle dark mode
+      darkToggle.addEventListener('change', function() {
+        if (this.checked) {
+          htmlElement.classList.add('dark');
+          localStorage.setItem('color-theme', 'dark');
+        } else {
+          htmlElement.classList.remove('dark');
+          localStorage.setItem('color-theme', 'light');
+        }
+      });
+      
+      // Mobile menu toggle
+      const sidebar = document.getElementById('sidebar');
+      const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+      
+      mobileMenuBtn.addEventListener('click', function() {
+        if (sidebar.classList.contains('-translate-x-full')) {
+          sidebar.classList.remove('-translate-x-full');
+        } else {
+          sidebar.classList.add('-translate-x-full');
+        }
+      });
+      
+      // Close sidebar when clicking outside on mobile
+      document.addEventListener('click', function(event) {
+        const isClickInsideSidebar = sidebar.contains(event.target);
+        const isClickOnMenuButton = mobileMenuBtn.contains(event.target);
+        
+        if (!isClickInsideSidebar && !isClickOnMenuButton && !sidebar.classList.contains('-translate-x-full') && window.innerWidth < 768) {
+          sidebar.classList.add('-translate-x-full');
+        }
+      });
+      
+      // Navigation links - smooth scrolling and active state
+      const navLinks = document.querySelectorAll('.nav-link');
+      
+      navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+          // Close mobile sidebar when link clicked
+          if (window.innerWidth < 768) {
+            sidebar.classList.add('-translate-x-full');
+          }
+          
+          // Remove active class from all links
+          navLinks.forEach(link => {
+            link.classList.remove('bg-primary-100', 'dark:bg-primary-900/30', 'text-primary-600', 'dark:text-primary-400');
+          });
+          
+          // Add active class to clicked link
+          this.classList.add('bg-primary-100', 'dark:bg-primary-900/30', 'text-primary-600', 'dark:text-primary-400');
+        });
+      });
+      
+      // Stream Key generation
+      let streamKey = ""; 
+      const generateKeyBtn = document.getElementById('generate-key');
+      const generatedStreamKeyContainer = document.getElementById('generated-stream-key');
+      const keyStatus = document.getElementById('key-status');
+      
+      generateKeyBtn.addEventListener('click', async function() {
+        const streamKey = await generateStreamKey();        
+        generatedStreamKeyContainer.innerHTML = `
+        <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div class=" bg-gray-200 dark:bg-gray-600 px-4 py-2 rounded-lg stream-key-display">
+                    ${streamKey}
+                </div>
+                <div class="flex justify-center space-x-2">
+                    <button id="copy-key" class="shrink-0 px-3 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-lg transition-colors">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                    <button id="refresh-key" class="shrink-0 px-3 py-2 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 rounded-lg transition-colors">
+                        <i class="fa-solid fa-rotate"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 mt-4">
+                <i class="fa-solid fa-circle-info text-yellow-500"></i>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Keep your stream key secret. Never share it publicly. If compromised, generate a new key immediately.
+                </p>
+            </div>
+        </div>
+    `;
+        
+        // Update key status on dashboard
+        keyStatus.textContent = "Active";
+        keyStatus.classList.add("text-green-600", "dark:text-green-400");
+
+       // Copy button for stream key
+       document.getElementById('copy-key').addEventListener('click', function () {
+            navigator.clipboard.writeText(streamKey).then(() => {
+                this.classList.add('bg-green-200', 'dark:bg-green-600', 'hover:bg-green-300', 'dark:hover:bg-green-500');
+                this.innerHTML = '<i class="fa-solid fa-check"></i>';
+                setTimeout(() => {
+                    this.classList.remove('bg-green-200', 'dark:bg-green-600', 'hover:bg-green-300', 'dark:hover:bg-green-500');
+                    this.innerHTML = '<i class="fa-regular fa-copy"></i>';
+                }, 6000);
+            });
+        });
+
+        // Copy button for RTMP ingest URL
+        document.getElementById('copy-ingest-url').addEventListener('click', function () {
+            navigator.clipboard.then(() => {
+                this.classList.add('bg-green-200', 'dark:bg-green-600', 'hover:bg-green-300', 'dark:hover:bg-green-500');
+                setTimeout(() => {
+                    this.classList.remove('bg-green-200', 'dark:bg-green-600', 'hover:bg-green-300', 'dark:hover:bg-green-500');
+                }, 2000);
+            });
+        });
+        
+        // Add refresh functionality
+        document.getElementById('refresh-key').addEventListener('click', async function () {
+            const refreshButton = this;
+            const icon = refreshButton.querySelector('i');
+        
+            // Add spinning effect
+            icon.classList.add('fa-spin');
+            refreshButton.disabled = true; // Disable the button to prevent spamming
+        
+            // Simulate a delay (3–5 seconds)
+            setTimeout(async () => {
+                const newStreamKey = await generateStreamKey();
+                const keyElement = generatedStreamKeyContainer.querySelector('.stream-key-display');
+                keyElement.textContent = newStreamKey;
+        
+                // Remove spinning effect and re-enable the button
+                icon.classList.remove('fa-spin');
+                refreshButton.disabled = false;
+            }, 3000); // Adjust the delay as needed (e.g., 3000ms = 3 seconds)
+        });
+    });
+      
+      // Helper function to generate the stream key
+    async function generateStreamKey() {
+
+        try {
+            const response = await fetch('http://localhost:8080/api/generate-stream-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userID: "dev" }) //FIXME - pass accesstoken in prod
+            });
+
+            data = await response.json()
+
+            return data.streamKey;
+
+        } catch (err) {
+            alert('Error creating stream: ' + err.message);
+            return "";
+        }
+    }
+
+      
+      // Simulate connection status check
+      setTimeout(() => {
+        const ytAuthStatus = document.getElementById('yt-auth-status');
+        ytAuthStatus.textContent = 'Connected';
+        ytAuthStatus.classList.remove('bg-yellow-100', 'text-yellow-800', 'dark:bg-yellow-900/40', 'dark:text-yellow-200');
+        ytAuthStatus.classList.add('bg-green-100', 'text-green-800', 'dark:bg-green-900/40', 'dark:text-green-200');
+        
+        document.getElementById('connected-count').textContent = '1';
+      }, 2000);
+      
+      // Form submission
+      const streamForm = document.getElementById('stream-form');
+      streamForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        // Check if we have a stream key
+        if (document.getElementById('key-status').textContent !== 'Active') {
+            alert('Please generate a stream key before going live.');
+            return;
+        }
+        
+        // Get the current stream key
+        const streamKey = document.querySelector('.stream-key-display')?.textContent?.trim() || "";
+        if (!streamKey) {
+            alert('Please generate a stream key before going live.');
+            return;
+        }
+    
+          // Get form data
+        const streamTitle = document.getElementById('title').value;
+        const streamDescription = document.getElementById('description').value;
+        const destinations = Array.from(document.querySelectorAll('.platform-btn'))
+            .filter((btn) => !btn.classList.contains('opacity-50') && !btn.querySelector('span').textContent.trim().includes('Add More'))
+            .map((btn) => btn.querySelector('span').textContent.trim());
+    
+        // Prepare the payload
+        const payload = {
+            userID: "dev", //FIXME - pass accesstoken in prod
+            title: streamTitle,
+            description: streamDescription,
+            destinations,
+        };
+    
+        try {
+            // Send the request to the backend
+            const response = await fetch('http://localhost:8080/api/streams', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+    
+            if (!response.ok) {
+                throw new Error(`Failed to create stream: ${response.statusText}`);
+            }
+    
+            const data = await response.json();
+    
+            // Update the UI to reflect the active stream
+            document.getElementById('active-streams').textContent = '1';
+            document.getElementById('stream-preview-title').textContent = streamTitle;
+            document.getElementById('stream-preview-description').textContent = streamDescription;
+            
+            alert(`Stream "${streamTitle}" is now live on connected platforms!`);
+            console.log('Stream created successfully:', data);
+            
+            // Initialize the stream player with the current stream key
+            initializeStreamPlayer(streamKey);
+        } catch (error) {
+            console.error('Error creating stream:', error);
+            alert('Failed to create stream. Please try again.');
+        }
+    });
+      
+      // Quick stream button
+      document.getElementById('quick-stream-btn').addEventListener('click', function() {
+        document.getElementById('title').value = 'Quick Stream - ' + new Date().toLocaleDateString();
+        document.getElementById('description').value = 'This is a quick stream started from the dashboard.';
+        
+        // Scroll to create stream section
+        document.querySelector('#create-stream').scrollIntoView({ behavior: 'smooth' });
+
+
+
+        let currentStreamKey = "";
+        let streamPlayer = null;
+        function initializeStreamPlayer(streamKey) {
+        currentStreamKey = streamKey;
+        const video = document.getElementById('stream-player');
+        const streamUrl = `http://localhost:8081/hls/${streamKey}.m3u8`;
+        
+        // Show the stream preview section
+        document.getElementById('stream-preview').classList.remove('hidden');
+        
+        // Scroll to stream preview
+        document.querySelector('#stream-preview').scrollIntoView({ behavior: 'smooth' });
+        
+        // Update stream info
+        document.getElementById('stream-preview-key').textContent = streamKey;
+        
+        // Initialize HLS player
+        if (Hls.isSupported()) {
+            if (streamPlayer) {
+            streamPlayer.destroy();
+            }
+            
+            streamPlayer = new Hls({
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 90
+            });
+            
+            streamPlayer.loadSource(streamUrl);
+            streamPlayer.attachMedia(video);
+            streamPlayer.on(Hls.Events.MANIFEST_PARSED, function() {
+            video.play().catch(e => {
+                console.log('Auto-play prevented: ', e);
+            });
+            });
+            
+            streamPlayer.on(Hls.Events.ERROR, function(event, data) {
+            if (data.fatal) {
+                console.error('Fatal HLS error:', data);
+                if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                // Try to recover on network errors
+                console.log('Trying to recover from network error...');
+                streamPlayer.startLoad();
+                } else {
+                console.log('Unrecoverable HLS error');
+                }
+            }
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // For Safari
+            video.src = streamUrl;
+            video.addEventListener('loadedmetadata', function() {
+            video.play().catch(e => {
+                console.log('Auto-play prevented: ', e);
+            });
+            });
+        }
+        }
+
+        // Copy stream URL button
+        document.getElementById('copy-stream-url').addEventListener('click', function() {
+        const shareUrl = `http://localhost:8081/hls/${currentStreamKey}.m3u8`;
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            this.innerHTML = '<i class="fa-solid fa-check mr-2"></i>Copied!';
+            setTimeout(() => {
+            this.innerHTML = '<i class="fa-regular fa-copy mr-2"></i>Copy Stream URL';
+            }, 2000);
+        });
+        });
+
+        // Share stream button functionality
+        document.getElementById('share-stream').addEventListener('click', function() {
+        // In a real app, this would open a share dialog with social options
+        alert('Share functionality would be implemented here in production.');
+        });
+
+        const originalGenerateKeyFunction = generateStreamKey;
+        generateStreamKey = async function() {
+        const key = await originalGenerateKeyFunction();
+        currentStreamKey = key;
+        return key;
+        };
+    });
+});
+  </script>
+</body>
+</html>

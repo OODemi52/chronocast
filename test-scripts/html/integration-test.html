@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChronoCast Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Enable dark mode with class strategy -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+    }
+  </script>
+  <!-- Font Awesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* Custom animations */
+    .fade-in { animation: fadeIn 0.5s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-gray-200 dark:from-gray-900 dark:to-gray-800 text-gray-800 dark:text-gray-200 transition-colors duration-300">
+  <!-- Navigation Bar -->
+  <nav class="bg-white dark:bg-gray-800 shadow-md transition-colors duration-300">
+    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+      <div class="flex items-center space-x-2">
+        <i class="fa-solid fa-video text-indigo-600 dark:text-indigo-400 text-2xl"></i>
+        <span class="font-bold text-xl">ChronoCast</span>
+      </div>
+      <ul class="hidden md:flex space-x-6">
+        <li><a href="#auth-stream" class="hover:text-indigo-600 transition-colors">Dashboard</a></li>
+        <li><a href="#schedule" class="hover:text-indigo-600 transition-colors">Schedule</a></li>
+        <li><a href="#analytics" class="hover:text-indigo-600 transition-colors">Analytics</a></li>
+      </ul>
+      <div class="flex items-center space-x-4">
+        <!-- Dark Mode Toggle -->
+        <button id="dark-toggle" class="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+          <i id="dark-icon" class="fa-solid fa-moon text-gray-600 dark:text-gray-300"></i>
+        </button>
+        <!-- Profile Modal Trigger -->
+        <button id="profile-btn" class="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+          <i class="fa-solid fa-user text-gray-600 dark:text-gray-300"></i>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Profile Modal -->
+  <div id="profile-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-md w-full p-6 relative fade-in">
+      <button id="close-profile" class="absolute top-3 right-3 text-gray-600 dark:text-gray-300">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      <h3 class="text-xl font-semibold mb-4">User Profile</h3>
+      <p>This is a placeholder for user profile information. You can later integrate user settings, preferences, and account details here.</p>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 py-8 space-y-8">
+    <!-- Authentication & Stream Key Section -->
+    <section id="auth-stream" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 fade-in">
+      <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Authentication</h2>
+      <div class="mb-6">
+        <p class="font-medium">YouTube Authentication</p>
+        <a href="http://localhost:8080/auth/login/youtube?platform=youtube" 
+           class="mt-2 inline-block bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded transition-colors">
+          <i class="fab fa-youtube mr-2"></i> Authenticate with YouTube
+        </a>
+        <div id="auth-status" class="mt-4"></div>
+      </div>
+      <hr class="border-gray-200 dark:border-gray-700 my-4">
+      <div>
+        <p class="font-medium">ChronoCast Stream Key</p>
+        <button id="generate-key" class="mt-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded transition-colors">
+          Generate Stream Key
+        </button>
+        <div id="generated-stream-key" class="mt-4"></div>
+      </div>
+    </section>
+
+    <!-- Create Stream Section -->
+    <section id="create-stream" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 fade-in">
+      <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Create Stream</h2>
+      <form id="stream-form" class="space-y-4">
+        <div>
+          <label for="title" class="block text-gray-700 dark:text-gray-300">Stream Title</label>
+          <input type="text" id="title" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700" required>
+        </div>
+        <div>
+          <label for="description" class="block text-gray-700 dark:text-gray-300">Description</label>
+          <textarea id="description" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <p class="text-gray-700 dark:text-gray-300 mb-2">Destinations</p>
+          <div class="flex flex-wrap gap-4">
+            <div class="flex items-center">
+              <input type="checkbox" id="youtube" class="mr-2" checked>
+              <label for="youtube" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fab fa-youtube text-red-500 mr-1"></i>YouTube
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="facebook" class="mr-2">
+              <label for="facebook" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fab fa-facebook text-blue-600 mr-1"></i>Facebook
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="twitch" class="mr-2">
+              <label for="twitch" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fab fa-twitch text-purple-500 mr-1"></i>Twitch
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="instagram" class="mr-2">
+              <label for="instagram" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fab fa-instagram text-pink-500 mr-1"></i>Instagram
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="x" class="mr-2">
+              <label for="x" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fa-brands fa-x-twitter text-blue-400 mr-1"></i>X
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="tiktok" class="mr-2">
+              <label for="tiktok" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fa-brands fa-tiktok text-black mr-1"></i>TikTok
+              </label>
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded transition-colors">
+          Create Stream
+        </button>
+      </form>
+    </section>
+
+    <!-- Schedule Recurrent Stream Section -->
+    <section id="schedule" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 fade-in">
+      <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Schedule Recurrent Stream</h2>
+      <form id="schedule-form" class="space-y-4">
+        <div>
+          <label for="schedule-title" class="block text-gray-700 dark:text-gray-300">Stream Title</label>
+          <input type="text" id="schedule-title" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700" required>
+        </div>
+        <div>
+          <label for="schedule-description" class="block text-gray-700 dark:text-gray-300">Description</label>
+          <textarea id="schedule-description" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700"></textarea>
+        </div>
+        <div>
+          <label for="schedule-date" class="block text-gray-700 dark:text-gray-300">Date & Time</label>
+          <input type="datetime-local" id="schedule-date" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700" required>
+        </div>
+        <div>
+          <label for="recurrence" class="block text-gray-700 dark:text-gray-300">Recurrence</label>
+          <select id="recurrence" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-gray-50 dark:bg-gray-700">
+            <option value="none">None</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+        <div>
+          <p class="text-gray-700 dark:text-gray-300 mb-2">Destinations</p>
+          <div class="flex flex-wrap gap-4">
+            <div class="flex items-center">
+              <input type="checkbox" id="sched-youtube" class="mr-2" checked>
+              <label for="sched-youtube" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fab fa-youtube text-red-500 mr-1"></i>YouTube
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="sched-facebook" class="mr-2">
+              <label for="sched-facebook" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fab fa-facebook text-blue-600 mr-1"></i>Facebook
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="sched-twitch" class="mr-2">
+              <label for="sched-twitch" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fab fa-twitch text-purple-500 mr-1"></i>Twitch
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="sched-instagram" class="mr-2">
+              <label for="sched-instagram" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fab fa-instagram text-pink-500 mr-1"></i>Instagram
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="sched-x" class="mr-2">
+              <label for="sched-x" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fa-brands fa-x-twitter text-blue-400 mr-1"></i>X
+              </label>
+            </div>
+            <div class="flex items-center">
+              <input type="checkbox" id="sched-tiktok" class="mr-2">
+              <label for="sched-tiktok" class="flex items-center text-gray-700 dark:text-gray-300">
+                <i class="fa-brands fa-tiktok text-black mr-1"></i>TikTok
+              </label>
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded transition-colors">
+          Schedule Stream
+        </button>
+      </form>
+    </section>
+
+    <!-- Stream Info & Preview Section -->
+    <section id="stream-info-preview" class="space-y-6 hidden fade-in">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Stream Information</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p class="font-medium">Stream Key:</p>
+            <code id="stream-key" class="block bg-gray-100 dark:bg-gray-700 p-2 rounded"></code>
+          </div>
+          <div>
+            <p class="font-medium">Ingest URL:</p>
+            <code id="ingest-url" class="block bg-gray-100 dark:bg-gray-700 p-2 rounded"></code>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Stream Preview</h2>
+        <video id="preview" controls class="w-full rounded"></video>
+      </div>
+    </section>
+
+    <!-- Analytics Section -->
+    <section id="analytics" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 hidden fade-in">
+      <h2 class="text-2xl font-semibold mb-4 border-b pb-2 border-gray-200 dark:border-gray-700">Stream Analytics</h2>
+      <iframe src="http://localhost:8081/stat" class="w-full h-96 rounded" frameborder="0" title="Stream Statistics"></iframe>
+    </section>
+  </main>
+
+  <!-- JavaScript -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script>
+    // Dark mode toggle
+    const darkToggle = document.getElementById('dark-toggle');
+    const darkIcon = document.getElementById('dark-icon');
+    darkToggle.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      // Save user preference
+      if(document.documentElement.classList.contains('dark')){
+        localStorage.setItem('theme', 'dark');
+        darkIcon.classList.replace('fa-moon', 'fa-sun');
+      } else {
+        localStorage.setItem('theme', 'light');
+        darkIcon.classList.replace('fa-sun', 'fa-moon');
+      }
+    });
+    // Apply theme on load based on stored preference
+    if(localStorage.getItem('theme') === 'dark'){
+      document.documentElement.classList.add('dark');
+      darkIcon.classList.replace('fa-moon', 'fa-sun');
+    }
+
+    // Profile Modal Toggle
+    const profileBtn = document.getElementById('profile-btn');
+    const profileModal = document.getElementById('profile-modal');
+    const closeProfile = document.getElementById('close-profile');
+    profileBtn.addEventListener('click', () => {
+      profileModal.classList.remove('hidden');
+    });
+    closeProfile.addEventListener('click', () => {
+      profileModal.classList.add('hidden');
+    });
+    // Close modal when clicking outside the modal content
+    profileModal.addEventListener('click', (e) => {
+      if(e.target === profileModal) profileModal.classList.add('hidden');
+    });
+
+    // Generate Stream Key Handler
+    document.getElementById('generate-key').addEventListener('click', async () => {
+      const generatedKeyDiv = document.getElementById('generated-stream-key');
+      const existingKey = generatedKeyDiv.querySelector('code')?.textContent.trim();
+      if (existingKey) {
+        const regenerate = confirm("A stream key was already generated for you. Do you want to regenerate it?");
+        if (!regenerate) return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:8080/api/generate-stream-key', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userID: "dev" }) //FIXME - pass accesstoken in prod
+        });
+        const data = await response.json();
+        generatedKeyDiv.innerHTML = `
+          <code id="stream-key-code" class="text-indigo-600 text-lg">${data.streamKey}</code>
+          <button id="copy-key" class="ml-4 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 py-1 px-3 rounded">Copy</button>
+        `;
+        generatedKeyDiv.className = 'mt-4 flex items-center bg-green-100 dark:bg-green-900 p-4 rounded';
+        document.getElementById("generate-key").textContent = "Regenerate Stream Key";
+        attachCopyListener(data.streamKey);
+      } catch (err) {
+        generatedKeyDiv.className = 'mt-4 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded';
+        generatedKeyDiv.textContent = 'Failed to generate stream key.';
+      }
+    });
+    
+    function attachCopyListener(streamKey) {
+      const copyButton = document.getElementById('copy-key');
+      copyButton.addEventListener('click', () => {
+        navigator.clipboard.writeText(streamKey).then(() => {
+          const originalText = copyButton.textContent;
+          copyButton.textContent = '✔ Copied!';
+          setTimeout(() => { copyButton.textContent = originalText; }, 2000);
+        }).catch(err => {
+          alert('Failed to copy stream key: ' + err.message);
+        });
+      });
+    }
+    
+    // Stream Form Submit Handler
+    document.getElementById('stream-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const description = document.getElementById('description').value;
+      const destinations = [];
+      if (document.getElementById('youtube').checked) destinations.push('youtube');
+      if (document.getElementById('facebook').checked) destinations.push('facebook');
+      if (document.getElementById('twitch').checked) destinations.push('twitch');
+      if (document.getElementById('instagram').checked) destinations.push('instagram');
+      if (document.getElementById('x').checked) destinations.push('x');
+      if (document.getElementById('tiktok').checked) destinations.push('tiktok');
+      
+      const streamKey = document.getElementById('generated-stream-key').textContent;
+      if (!streamKey) {
+        alert('Please generate a stream key before creating a stream and ensure to paste it into OBS (or your choice of streaming software).');
+        return;
+      }
+      
+      try {
+        const response = await fetch('http://localhost:8080/api/streams', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ streamKey, title, description, destinations })
+        });
+        const data = await response.json();
+        
+        // Display stream info and preview
+        document.getElementById('stream-key').textContent = data.streamKey;
+        document.getElementById('ingest-url').textContent = data.ingestUrl;
+        document.getElementById('stream-info-preview').classList.remove('hidden');
+        setupPreview(data.hlsPlayUrl);
+      } catch (err) {
+        alert('Error creating stream: ' + err.message);
+      }
+    });
+    
+    // Setup HLS Preview
+    function setupPreview(url) {
+      const video = document.getElementById('preview');
+      if (Hls.isSupported()) {
+        const hls = new Hls();
+        hls.loadSource(url);
+        hls.attachMedia(video);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = url;
+      }
+    }
+    
+    // Check Authentication Token
+    fetch('token.txt')
+      .then(response => response.ok ? response.text() : Promise.reject('No token'))
+      .then(token => {
+        document.getElementById('auth-status').innerHTML = '<div class="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 p-2 rounded">Authenticated with YouTube</div>';
+      })
+      .catch(() => {
+        document.getElementById('auth-status').innerHTML = '<div class="bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 p-2 rounded">Not authenticated</div>';
+      });
+    
+    // Initial message for stream key
+    if (!document.getElementById('generated-stream-key').textContent.trim()) {
+      document.getElementById('generated-stream-key').innerHTML = `<div class="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 p-2 rounded">Click the button to generate your stream key</div>`;
+    }
+    
+    // Schedule Form Submit Handler (Placeholder)
+    document.getElementById('schedule-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('schedule-title').value;
+      const description = document.getElementById('schedule-description').value;
+      const datetime = document.getElementById('schedule-date').value;
+      const recurrence = document.getElementById('recurrence').value;
+      const destinations = [];
+      if (document.getElementById('sched-youtube').checked) destinations.push('youtube');
+      if (document.getElementById('sched-facebook').checked) destinations.push('facebook');
+      if (document.getElementById('sched-twitch').checked) destinations.push('twitch');
+      if (document.getElementById('sched-instagram').checked) destinations.push('instagram');
+      if (document.getElementById('sched-x').checked) destinations.push('x');
+      if (document.getElementById('sched-tiktok').checked) destinations.push('tiktok');
+      
+      // Placeholder for scheduling API call
+      alert('Schedule Stream functionality is not implemented yet.');
+    });
+  </script>
+</body>
+</html>

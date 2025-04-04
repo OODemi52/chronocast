@@ -1,0 +1,37 @@
+# Environment files
+.env
+
+# Generated files and directories
+grpc/
+
+# Editor-specific files
+.VSCodeCounter
+
+# Configuration files
+nginx.conf
+
+# Sensitive files
+token.txt
+
+# Go-specific ignores
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Dependency directories
+vendor/
+
+# Build directories
+bin/
+build/
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store

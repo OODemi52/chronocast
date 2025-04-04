@@ -1,0 +1,75 @@
+# AUTO-GENERATED FILE - DO NOT EDIT
+
+# This file is used to configure NGINX settings and is generated automatically.
+# Manual changes may be overwritten or cause unexpected behavior.
+# Edit only if you fully understand the implications.
+
+worker_processes auto;
+
+error_log /tmp/nginx_error.log debug;
+
+pid /tmp/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+rtmp {
+    server {
+        listen {{.Port}};
+        chunk_size 4096;
+        
+        application live {
+            live on;
+            record off;
+
+            push_reconnect 1s;
+
+            access_log /tmp/rtmp_access.log;
+
+            on_publish http://127.0.0.1:8080/api/rtmp/auth;
+            on_publish_done http://127.0.0.1:8080/api/rtmp/publish-done;
+            
+            hls on;
+            hls_path /tmp/hls;
+            hls_fragment 3;
+            hls_playlist_length 60;
+            
+            # Stream specific push directives are added dynamically
+            {{range $key, $stream := .Streams}}
+            # Stream: {{$key}}
+            if ($name = '{{$key}}') {
+                {{range $dest := $stream.Destinations}}
+                push {{$dest.URL}}{{$dest.StreamKey}};
+                {{end}}
+            }
+            {{end}}
+        }
+    }
+}
+
+http {
+    server {
+        listen 8081;
+
+        location /hls {
+            types {
+                application/vnd.apple.mpegurl m3u8;
+                video/mp2t ts;
+            }
+            root /tmp;
+            add_header Cache-Control no-cache;
+            add_header Access-Control-Allow-Origin *; #TODO - Add better access controls
+        }
+
+        location /stat {
+            rtmp_stat all;
+            rtmp_stat_stylesheet stat.xsl;
+        }
+
+        location /stat.xsl {
+            root /opt/homebrew/share/nginx-rtmp-module/; #Adjust based on your Nginx installation #TODO - Make dynamic
+        }
+
+    }
+}
