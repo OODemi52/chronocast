@@ -26,8 +26,8 @@ type Stream struct {
 type SimpleRealtimeServer struct {
 	Port           string
 	ConfigPath     string
-	NginxPath      string
-	NginxProcess   *os.Process
+	SRSPath        string
+	SRSProcess     *os.Process
 	Streams        map[string]*Stream
 	StreamsLock    sync.RWMutex
 	ConfigTemplate *template.Template
@@ -65,15 +65,15 @@ func NewServer(port string) (*SimpleRealtimeServer, error) {
 	return &SimpleRealtimeServer{
 		Port:           port,
 		ConfigPath:     configPath,
-		NginxPath:      "/opt/homebrew/bin/nginx", // Adjust based on your Nginx installation //TODO - Make dynamic
+		SRSPath:        "/opt/homebrew/bin/nginx", // Adjust based on your Nginx installation //TODO - Make dynamic
 		Streams:        make(map[string]*Stream),
 		ConfigTemplate: tmpl,
 	}, nil
 }
 
-func (ns *SimpleRealtimeServer) Start() error {
+func (srs *SimpleRealtimeServer) Start() error {
 
-	rtmpPortInUse := exec.Command("lsof", "-i", fmt.Sprintf(":%s", strings.TrimPrefix(ns.Port, ":")))
+	rtmpPortInUse := exec.Command("lsof", "-i", fmt.Sprintf(":%s", strings.TrimPrefix(srs.Port, ":")))
 
 	rtmpOutput, _ := rtmpPortInUse.CombinedOutput()
 
@@ -85,7 +85,7 @@ func (ns *SimpleRealtimeServer) Start() error {
 
 		log.Println("Nginx is running on our ports, stopping it...")
 
-		stopCmd := exec.Command(ns.NginxPath, "-s", "stop", "-c", ns.ConfigPath)
+		stopCmd := exec.Command(srs.SRSPath, "-s", "stop", "-c", srs.ConfigPath)
 
 		if err := stopCmd.Run(); err != nil {
 			log.Printf("Warning: failed to stop existing Nginx: %v", err)
@@ -94,11 +94,11 @@ func (ns *SimpleRealtimeServer) Start() error {
 		time.Sleep(1 * time.Second)
 	}
 
-	if err := ns.generateConfig(); err != nil {
+	if err := srs.generateConfig(); err != nil {
 		return fmt.Errorf("failed to generate config: %v", err)
 	}
 
-	output, err := exec.Command(ns.NginxPath, "-c", ns.ConfigPath).CombinedOutput()
+	output, err := exec.Command(srs.SRSPath, "-c", srs.ConfigPath).CombinedOutput()
 
 	if err != nil {
 		return fmt.Errorf("failed to start Nginx RTMP server: %v, output: %s", err, output)
@@ -113,15 +113,15 @@ func (ns *SimpleRealtimeServer) Start() error {
 		return fmt.Errorf("nginx does not appear to be running after start: %v", err)
 	}
 
-	log.Printf("RTMP server started on port %s", ns.Port)
+	log.Printf("RTMP server started on port %s", srs.Port)
 
 	return nil
 
 }
 
-func (ns *SimpleRealtimeServer) Stop() error {
+func (srs *SimpleRealtimeServer) Stop() error {
 
-	cmd := exec.Command(ns.NginxPath, "-s", "stop")
+	cmd := exec.Command(srs.SRSPath, "-s", "stop")
 
 	output, err := cmd.CombinedOutput()
 
@@ -135,20 +135,20 @@ func (ns *SimpleRealtimeServer) Stop() error {
 
 }
 
-func (ns *SimpleRealtimeServer) Reload() error {
-	log.Printf("Reloading nginx with %d streams configured...", len(ns.Streams))
+func (srs *SimpleRealtimeServer) Reload() error {
+	log.Printf("Reloading nginx with %d streams configured...", len(srs.Streams))
 
 	// Add more logging around the generate config call
 	log.Println("Starting config generation...")
 
-	if err := ns.generateConfig(); err != nil {
+	if err := srs.generateConfig(); err != nil {
 		return fmt.Errorf("failed to generate config: %v", err)
 	}
 
 	log.Println("Config generation successful, reading config file...")
 
 	// Debug code
-	configContent, err := os.ReadFile(ns.ConfigPath)
+	configContent, err := os.ReadFile(srs.ConfigPath)
 	if err == nil {
 		log.Printf("Config file contents (length: %d bytes)", len(configContent))
 	} else {
@@ -161,7 +161,7 @@ func (ns *SimpleRealtimeServer) Reload() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, ns.NginxPath, "-s", "reload")
+	cmd := exec.CommandContext(ctx, srs.SRSPath, "-s", "reload")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -178,15 +178,15 @@ func (ns *SimpleRealtimeServer) Reload() error {
 	return nil
 }
 
-func (ns *SimpleRealtimeServer) generateConfig() error {
+func (srs *SimpleRealtimeServer) generateConfig() error {
 
-	ns.StreamsLock.RLock()
+	srs.StreamsLock.RLock()
 
-	defer ns.StreamsLock.RUnlock()
+	defer srs.StreamsLock.RUnlock()
 
-	log.Printf("Generating nginx config with %d streams", len(ns.Streams))
+	log.Printf("Generating nginx config with %d streams", len(srs.Streams))
 
-	file, err := os.Create(ns.ConfigPath)
+	file, err := os.Create(srs.ConfigPath)
 
 	if err != nil {
 		return fmt.Errorf("failed to create config file: %v", err)
@@ -198,20 +198,20 @@ func (ns *SimpleRealtimeServer) generateConfig() error {
 		Port    string
 		Streams map[string]*Stream
 	}{
-		Port:    strings.TrimPrefix(ns.Port, ":"),
-		Streams: ns.Streams, //NOTE - Look into possibly populating this with streams from a db in the case of restarting.
+		Port:    strings.TrimPrefix(srs.Port, ":"),
+		Streams: srs.Streams, //NOTE - Look into possibly populating this with streams from a db in the case of restarting.
 	}
 
-	if err := ns.ConfigTemplate.Execute(file, data); err != nil {
+	if err := srs.ConfigTemplate.Execute(file, data); err != nil {
 		return fmt.Errorf("failed to populate template: %v", err)
 	}
 
 	return nil
 }
 
-func (ns *SimpleRealtimeServer) AddStream(key string, destinations []StreamDestination) error {
+func (srs *SimpleRealtimeServer) AddStream(key string, destinations []StreamDestination) error {
 
-	ns.StreamsLock.Lock()
+	srs.StreamsLock.Lock()
 
 	log.Printf("Adding stream with key: %s and %d destinations", key, len(destinations))
 
@@ -219,36 +219,36 @@ func (ns *SimpleRealtimeServer) AddStream(key string, destinations []StreamDesti
 		log.Printf("Destination %d: URL=%s, StreamKey=%s", i, dest.URL, dest.StreamKey)
 	}
 
-	ns.Streams[key] = &Stream{
+	srs.Streams[key] = &Stream{
 		Key:          key,
 		Destinations: destinations,
 	}
 
-	log.Printf("Current streams in map: %d", len(ns.Streams))
+	log.Printf("Current streams in map: %d", len(srs.Streams))
 
-	ns.StreamsLock.Unlock()
+	srs.StreamsLock.Unlock()
 
-	return ns.Reload()
-
-}
-
-func (ns *SimpleRealtimeServer) RemoveStream(key string) error {
-
-	ns.StreamsLock.Lock()
-
-	delete(ns.Streams, key)
-
-	ns.StreamsLock.Unlock()
-
-	return ns.Reload()
+	return srs.Reload()
 
 }
 
-func (ns *SimpleRealtimeServer) GetIngestURL(streamKey string) string {
+func (srs *SimpleRealtimeServer) RemoveStream(key string) error {
+
+	srs.StreamsLock.Lock()
+
+	delete(srs.Streams, key)
+
+	srs.StreamsLock.Unlock()
+
+	return srs.Reload()
+
+}
+
+func (srs *SimpleRealtimeServer) GetIngestURL(streamKey string) string {
 	//TODO - Make this work for production server and get the info dynamically
 	host := "localhost"
 
-	port := ns.Port
+	port := srs.Port
 
 	if port[0] == ':' {
 		port = port[1:]
@@ -258,7 +258,7 @@ func (ns *SimpleRealtimeServer) GetIngestURL(streamKey string) string {
 
 }
 
-func (ns *SimpleRealtimeServer) GetHLSURL(streamKey string) string {
+func (srs *SimpleRealtimeServer) GetHLSURL(streamKey string) string {
 
 	return fmt.Sprintf("http://localhost:8081/hls/%s.m3u8", streamKey)
 
