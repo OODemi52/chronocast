@@ -18,8 +18,6 @@ RUN apt-get update && apt-get install -y \
     yasm \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy your custom configuration file (if you have one in your repo)
-COPY ./srs.config /opt/srs/conf/srs.config
     
 # Set the working directory
 WORKDIR /usr/local/src
