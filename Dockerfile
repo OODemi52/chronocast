@@ -1,6 +1,9 @@
 # Use an appropriate base image with necessary build tools
 FROM ubuntu:20.04
 
+# Set noninteractive mode for apt-get to avoid install hanging on CLI prompts
+ENV DEBIAN_FRONTEND=noninteractive
+
 # Install dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
