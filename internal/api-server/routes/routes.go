@@ -6,7 +6,7 @@ import (
 	rtmpserver "github.com/OODemi52/chronocast-server/internal/rtmp-server"
 )
 
-func SetupRoutes(rtmpServer *rtmpserver.NginxServer) *http.ServeMux {
+func SetupRoutes(rtmpServer *rtmpserver.SimpleRealtimeServer) *http.ServeMux {
 
 	muxRouter := http.NewServeMux()
 

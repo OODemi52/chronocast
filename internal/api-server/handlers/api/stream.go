@@ -48,7 +48,7 @@ func GenerateStreamKeyHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func CreateStreamHandler(rtmpServer *rtmpserver.NginxServer) http.HandlerFunc {
+func CreateStreamHandler(rtmpServer *rtmpserver.SimpleRealtimeServer) http.HandlerFunc {
 	//TODO - This function is handling to many different responsibilities
 	//       Need to reasses scope and split it up
 
@@ -167,7 +167,7 @@ func CreateStreamHandler(rtmpServer *rtmpserver.NginxServer) http.HandlerFunc {
 	}
 }
 
-func ManageStreamHandler(rtmpServer *rtmpserver.NginxServer) http.HandlerFunc {
+func ManageStreamHandler(rtmpServer *rtmpserver.SimpleRealtimeServer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract stream key from URL path
 		parts := strings.Split(r.URL.Path, "/")

@@ -8,7 +8,7 @@ import (
 	rtmpserver "github.com/OODemi52/chronocast-server/internal/rtmp-server"
 )
 
-func SetupAPIRoutes(mux *http.ServeMux, rtmpServer *rtmpserver.NginxServer) {
+func SetupAPIRoutes(mux *http.ServeMux, rtmpServer *rtmpserver.SimpleRealtimeServer) {
 
 	mux.HandleFunc("/api/rtmp/auth", apiHandlers.RTMPAuthHandler)
 

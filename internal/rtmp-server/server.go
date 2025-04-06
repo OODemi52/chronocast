@@ -23,7 +23,7 @@ type Stream struct {
 	Destinations []StreamDestination
 }
 
-type NginxServer struct {
+type SimpleRealtimeServer struct {
 	Port           string
 	ConfigPath     string
 	NginxPath      string
@@ -34,7 +34,7 @@ type NginxServer struct {
 	ConfigDir      string
 }
 
-func NewServer(port string) (*NginxServer, error) {
+func NewServer(port string) (*SimpleRealtimeServer, error) {
 
 	workDir, err := os.Getwd()
 
@@ -62,7 +62,7 @@ func NewServer(port string) (*NginxServer, error) {
 		return nil, fmt.Errorf("failed to parse config template: %v", err)
 	}
 
-	return &NginxServer{
+	return &SimpleRealtimeServer{
 		Port:           port,
 		ConfigPath:     configPath,
 		NginxPath:      "/opt/homebrew/bin/nginx", // Adjust based on your Nginx installation //TODO - Make dynamic
@@ -71,7 +71,7 @@ func NewServer(port string) (*NginxServer, error) {
 	}, nil
 }
 
-func (ns *NginxServer) Start() error {
+func (ns *SimpleRealtimeServer) Start() error {
 
 	rtmpPortInUse := exec.Command("lsof", "-i", fmt.Sprintf(":%s", strings.TrimPrefix(ns.Port, ":")))
 
@@ -119,7 +119,7 @@ func (ns *NginxServer) Start() error {
 
 }
 
-func (ns *NginxServer) Stop() error {
+func (ns *SimpleRealtimeServer) Stop() error {
 
 	cmd := exec.Command(ns.NginxPath, "-s", "stop")
 
@@ -135,7 +135,7 @@ func (ns *NginxServer) Stop() error {
 
 }
 
-func (ns *NginxServer) Reload() error {
+func (ns *SimpleRealtimeServer) Reload() error {
 	log.Printf("Reloading nginx with %d streams configured...", len(ns.Streams))
 
 	// Add more logging around the generate config call
@@ -178,7 +178,7 @@ func (ns *NginxServer) Reload() error {
 	return nil
 }
 
-func (ns *NginxServer) generateConfig() error {
+func (ns *SimpleRealtimeServer) generateConfig() error {
 
 	ns.StreamsLock.RLock()
 
@@ -209,7 +209,7 @@ func (ns *NginxServer) generateConfig() error {
 	return nil
 }
 
-func (ns *NginxServer) AddStream(key string, destinations []StreamDestination) error {
+func (ns *SimpleRealtimeServer) AddStream(key string, destinations []StreamDestination) error {
 
 	ns.StreamsLock.Lock()
 
@@ -232,7 +232,7 @@ func (ns *NginxServer) AddStream(key string, destinations []StreamDestination) e
 
 }
 
-func (ns *NginxServer) RemoveStream(key string) error {
+func (ns *SimpleRealtimeServer) RemoveStream(key string) error {
 
 	ns.StreamsLock.Lock()
 
@@ -244,7 +244,7 @@ func (ns *NginxServer) RemoveStream(key string) error {
 
 }
 
-func (ns *NginxServer) GetIngestURL(streamKey string) string {
+func (ns *SimpleRealtimeServer) GetIngestURL(streamKey string) string {
 	//TODO - Make this work for production server and get the info dynamically
 	host := "localhost"
 
@@ -258,7 +258,7 @@ func (ns *NginxServer) GetIngestURL(streamKey string) string {
 
 }
 
-func (ns *NginxServer) GetHLSURL(streamKey string) string {
+func (ns *SimpleRealtimeServer) GetHLSURL(streamKey string) string {
 
 	return fmt.Sprintf("http://localhost:8081/hls/%s.m3u8", streamKey)
 

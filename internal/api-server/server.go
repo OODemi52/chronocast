@@ -14,7 +14,7 @@ type APIServer struct {
 	port       string
 }
 
-func NewServer(port string, rtmpServer *rtmpserver.NginxServer) (*APIServer, error) {
+func NewServer(port string, rtmpServer *rtmpserver.SimpleRealtimeServer) (*APIServer, error) {
 
 	return &APIServer{
 		port: port,

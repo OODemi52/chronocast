@@ -58,7 +58,7 @@ func main() {
 
 }
 
-func handleServerShutdown(apiServer *apiserver.APIServer, rtmpServer *rtmpserver.NginxServer) {
+func handleServerShutdown(apiServer *apiserver.APIServer, rtmpServer *rtmpserver.SimpleRealtimeServer) {
 
 	sigChan := make(chan os.Signal, 1)
 
