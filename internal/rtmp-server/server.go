@@ -259,6 +259,13 @@ func (srs *SimpleRealtimeServer) GetIngestURL(streamKey string) string {
 
 func (srs *SimpleRealtimeServer) GetHLSURL(streamKey string) string {
 
-	return fmt.Sprintf("http://localhost:8081/hls/%s.m3u8", streamKey)
+	if streamKey == "" {
+		log.Println("Stream key is empty. Returning an empty HLS URL.")
+		return ""
+	}
+	//TODO - Make this work for production server and get the info dynamically
+	host := "localhost"
+
+	return fmt.Sprintf("http://%s:8080/hls/%s.m3u8", host, streamKey)
 
 }
