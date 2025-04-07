@@ -7,9 +7,6 @@ grpc/
 # Editor-specific files
 .VSCodeCounter
 
-# Configuration files
-nginx.conf
-
 # Sensitive files
 token.txt
 
