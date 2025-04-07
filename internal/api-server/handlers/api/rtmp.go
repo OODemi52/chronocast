@@ -1,23 +1,48 @@
 package handlers
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
 	"github.com/OODemi52/chronocast-server/internal/rtmp-server/auth"
 )
 
+type OnPublishRequest struct {
+	App    string `json:"app"`
+	Stream string `json:"stream"`
+	TcUrl  string `json:"tcUrl"`
+	Client string `json:"client_id"`
+	IP     string `json:"ip"`
+	Vhost  string `json:"vhost"`
+	Param  string `json:"param"`
+}
+
+type OnUnPublishRequest struct {
+	App    string `json:"app"`
+	Stream string `json:"stream"`
+	TcUrl  string `json:"tcUrl"`
+	Client string `json:"client_id"`
+	IP     string `json:"ip"`
+	Vhost  string `json:"vhost"`
+	Param  string `json:"param"`
+}
+
+//TODO - Consider making a standard request type if it confirmed these two are the same
+
 func RTMPPublishedHandler(w http.ResponseWriter, r *http.Request) {
 
-	if err := r.ParseForm(); err != nil {
-		log.Printf("RTMP auth parse error: %v", err)
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
+	var req OnPublishRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Failed to parse JSON payload: %v", err)
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("RTMP auth request received with data: %+v", r.Form)
+	log.Printf("RTMP auth request received with data: %+v", req)
 
-	streamKey := r.FormValue("name")
+	streamKey := req.Stream
 
 	log.Printf("Stream key received: %+v", streamKey)
 
@@ -37,12 +62,15 @@ func RTMPPublishedHandler(w http.ResponseWriter, r *http.Request) {
 
 func RTMPUnPublishedHandler(w http.ResponseWriter, r *http.Request) {
 
-	if err := r.ParseForm(); err != nil {
-		log.Printf("RTMP publish done parse error: %v", err)
+	var req OnUnPublishRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("Failed to parse JSON payload: %v", err)
+		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("RTMP publish done with data: %+v", r.Form)
+	log.Printf("RTMP publish done with data: %+v", req)
 
 	w.WriteHeader(http.StatusOK)
 
