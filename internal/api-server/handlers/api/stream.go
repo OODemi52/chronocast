@@ -77,9 +77,6 @@ func CreateStreamHandler(rtmpServer *rtmpserver.SimpleRealtimeServer) http.Handl
 			return
 		}
 
-		log.Printf("Received CreateStream request: UserID=%s, Title=%s, Description=%s, Destinations=%v",
-			request.UserID, request.Title, request.Description, request.Destinations)
-
 		if request.UserID == "" {
 			http.Error(w, "Missing userID", http.StatusBadRequest)
 			return
@@ -91,6 +88,8 @@ func CreateStreamHandler(rtmpServer *rtmpserver.SimpleRealtimeServer) http.Handl
 			http.Error(w, "Stream key not found for user", http.StatusUnauthorized)
 			return
 		}
+
+		inputStreamURL := rtmpServer.GetIngestURL(streamKey)
 
 		var destinations []rtmpserver.StreamDestination
 
@@ -109,6 +108,7 @@ func CreateStreamHandler(rtmpServer *rtmpserver.SimpleRealtimeServer) http.Handl
 					Description: request.Description,
 					Privacy:     "public", //FIXME - change to be set by user instead of defaulting to public
 				},
+				inputStreamURL,
 			)
 
 			if err != nil {

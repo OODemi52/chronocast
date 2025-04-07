@@ -47,7 +47,7 @@ func NewMultiStreamService() (*MultiStreamService, error) {
 
 }
 
-func (m *MultiStreamService) CreateMultiStream(platforms []string, options types.StreamOptions, inputStreamURL string) ([]PlatformResult, error) {
+func (mss *MultiStreamService) CreateMultiStream(platforms []string, options types.StreamOptions, inputStreamURL string) ([]PlatformResult, error) {
 
 	var results []PlatformResult
 
@@ -55,7 +55,7 @@ func (m *MultiStreamService) CreateMultiStream(platforms []string, options types
 
 	for _, platformName := range platforms {
 
-		service, exists := m.Platforms[platformName]
+		service, exists := mss.Platforms[platformName]
 
 		if !exists {
 			err := fmt.Errorf("platform %s not initialized", platformName)
@@ -84,7 +84,7 @@ func (m *MultiStreamService) CreateMultiStream(platforms []string, options types
 
 			outputURL := fmt.Sprintf("%s%s", rtmpDestination.URL, rtmpDestination.StreamKey)
 
-			err := m.FFmpegService.StartProcess(fmt.Sprintf("%s:%s", options.Title, platformName), inputStreamURL, outputURL)
+			err := mss.FFmpegService.StartProcess(fmt.Sprintf("%s:%s", options.Title, platformName), inputStreamURL, outputURL)
 
 			if err != nil {
 				result.Error = fmt.Errorf("failed to start FFmpeg for %s: %w", platformName, err)
