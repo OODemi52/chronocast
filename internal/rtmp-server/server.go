@@ -1,7 +1,9 @@
 package rtmpserver
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -132,7 +134,13 @@ func (srs *SimpleRealtimeServer) Reload() error {
 
 func (srs *SimpleRealtimeServer) AddStream(key string, destinations []StreamDestination) error {
 
-	srs.StreamsLock.Lock()
+	if key == "" {
+		return fmt.Errorf("stream key cannot be empty")
+	}
+
+	if len(destinations) == 0 {
+		return fmt.Errorf("destinations cannot be empty")
+	}
 
 	log.Printf("Adding stream with key: %s and %d destinations", key, len(destinations))
 
@@ -140,16 +148,52 @@ func (srs *SimpleRealtimeServer) AddStream(key string, destinations []StreamDest
 		log.Printf("Destination %d: URL=%s, StreamKey=%s", i, dest.URL, dest.StreamKey)
 	}
 
+	payload := map[string]any{
+		"id":           key,
+		"destinations": destinations,
+	}
+
+	jsonPayload, err := json.Marshal(payload)
+
+	if err != nil {
+		return fmt.Errorf("failed to convert payload to json: %v", err)
+	}
+
+	apiURL := "http://localhost:1985/api/v1/streams"
+
+	req, err := http.NewRequest("POST", apiURL, strings.NewReader(string(jsonPayload)))
+
+	if err != nil {
+		return fmt.Errorf("failed to create HTTP request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		return fmt.Errorf("failed to send HTTP request to SRS API: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("RTMP server returned unexpected status: %s, body: %s", resp.Status, string(body))
+	}
+
+	log.Println("Stream added successfully added.")
+
+	srs.StreamsLock.Lock()
+
+	defer srs.StreamsLock.Unlock()
+
 	srs.Streams[key] = &Stream{
 		Key:          key,
 		Destinations: destinations,
 	}
 
-	log.Printf("Current streams in map: %d", len(srs.Streams))
-
-	srs.StreamsLock.Unlock()
-
-	return srs.Reload()
+	return nil
 
 }
 
