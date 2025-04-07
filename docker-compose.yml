@@ -1,12 +1,15 @@
 services:
   srs:
-    image: ossrs/srs:5       # Use the official SRS Docker image
+    image: ossrs/srs:5                                  # Use the official SRS Docker image
     container_name: srs
     ports:
-      - "1935:1935"          # RTMP & WebRTC signaling
-      - "1985:1985"          # HTTP API and statistics
-      - "8080:8080"          # HLS/LL-HLS
-      - "10080:10080/udp"    # WebRTC media transport (UDP)
+      - "1935:1935"                                     # RTMP & WebRTC signaling
+      - "1985:1985"                                     # HTTP API and statistics
+      - "8080:8080"                                     # HLS/LL-HLS
+      - "10080:10080/udp"                               # WebRTC media transport (UDP)
     volumes:
       - ./config/srs.conf:/usr/local/srs/conf/srs.conf  # Map custom SRS config
+    environment:
+      CONFIG_PATH: /usr/local/srs/conf/srs.conf         # Path to the SRS config file
+      SRS_PATH: /usr/local/srs/objs/srs                 # Path to the SRS binary      
     command: ["./objs/srs", "-c", "conf/srs.conf"]      # Start SRS with your config
