@@ -392,7 +392,7 @@
                         Checking...
                       </div>
                     </div>
-                    <a href="http://localhost:8080/auth/login/youtube?platform=youtube" 
+                    <a href="http://localhost:8081/auth/login/youtube?platform=youtube" 
                        class="block w-full text-center bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg transition-colors">
                       <i class="fab fa-youtube mr-2"></i> Connect
                     </a>
@@ -972,7 +972,7 @@
     async function generateStreamKey() {
 
         try {
-            const response = await fetch('http://localhost:8080/api/generate-stream-key', {
+            const response = await fetch('http://localhost:8081/api/generate-stream-key', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ userID: "dev" }) //FIXME - pass accesstoken in prod
@@ -1034,7 +1034,7 @@
     
         try {
             // Send the request to the backend
-            const response = await fetch('http://localhost:8080/api/streams', {
+            const response = await fetch('http://localhost:8081/api/streams', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
