@@ -33,6 +33,7 @@ func (fs *FFmpegService) StartProcess(streamKey, inputURL, outputURL string) err
 	}
 
 	cmd := exec.Command("ffmpeg",
+		"-loglevel", "debug",
 		"-i", inputURL,
 		"-c:v", "copy",
 		"-c:a", "aac",
