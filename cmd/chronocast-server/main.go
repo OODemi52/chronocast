@@ -20,7 +20,7 @@ func main() {
 		log.Printf("Warning: No .env file found, using environment variables")
 	}
 
-	apiPort := flag.String("http-port", ":8080", "HTTP Server port")
+	apiPort := flag.String("http-port", ":8081", "HTTP Server port")
 
 	rtmpPort := flag.String("rtmp-port", ":1935", "RTMP Server port")
 
