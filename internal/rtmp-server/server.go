@@ -52,21 +52,21 @@ func NewServer(port string) (*SimpleRealtimeServer, error) {
 
 func (srs *SimpleRealtimeServer) Start() error {
 
-	log.Println("Starting RTMP server...")
+	log.Println("RTMP Server started via Docker, checking it's status..")
 
 	apiURL := "http://localhost:1985/api/v1/versions"
 
 	resp, err := http.Get(apiURL)
 
 	if err == nil && resp.StatusCode == http.StatusOK {
-		log.Println("SRS server is already running.")
+		log.Println("RTMP server is already running.")
 		return nil
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("SRS server returned unexpected status: %s", resp.Status)
+		return fmt.Errorf("RTMP server returned unexpected status: %s", resp.Status)
 	}
 
 	log.Printf("RTMP server is running and reachable at port %s.", srs.Port)
