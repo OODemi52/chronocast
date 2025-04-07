@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 )
@@ -77,15 +78,25 @@ func (srs *SimpleRealtimeServer) Start() error {
 
 func (srs *SimpleRealtimeServer) Stop() error {
 
-	cmd := exec.Command(srs.SRSPath, "-s", "stop")
+	log.Println("Stopping RTMP server via Docker...")
 
-	output, err := cmd.CombinedOutput()
+	cmd := exec.Command("docker", "ps", "-q", "--filter", "ancestor=ossrs/srs:latest")
 
-	if err != nil {
-		return fmt.Errorf("failed to stop RTMP server: %v, output: %s", err, output)
+	containerID, err := cmd.Output()
+
+	if err != nil || len(containerID) == 0 {
+		return fmt.Errorf("failed to find SRS container: %v", err)
 	}
 
-	log.Println("RTMP server stopped")
+	stopCmd := exec.Command("docker", "stop", strings.TrimSpace(string(containerID)))
+
+	output, err := stopCmd.CombinedOutput()
+
+	if err != nil {
+		return fmt.Errorf("failed to stop the RTMP server via Docker: %v, output: %s", err, output)
+	}
+
+	log.Println("RTMP server stopped successfully.")
 
 	return nil
 
