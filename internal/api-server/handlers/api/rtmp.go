@@ -56,7 +56,11 @@ func RTMPPublishedHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "text/plain")
+
 	w.WriteHeader(http.StatusOK)
+
+	w.Write([]byte("0"))
 
 }
 
@@ -72,6 +76,10 @@ func RTMPUnPublishedHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("RTMP publish done with data: %+v", req)
 
+	w.Header().Set("Content-Type", "text/plain")
+
 	w.WriteHeader(http.StatusOK)
+
+	w.Write([]byte("0"))
 
 }
