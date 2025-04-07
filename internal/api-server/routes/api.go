@@ -10,9 +10,9 @@ import (
 
 func SetupAPIRoutes(mux *http.ServeMux, rtmpServer *rtmpserver.SimpleRealtimeServer) {
 
-	mux.HandleFunc("/api/rtmp/auth", apiHandlers.RTMPAuthHandler)
+	mux.HandleFunc("/api/rtmp/published", apiHandlers.RTMPPublishedHandler)
 
-	mux.HandleFunc("/api/rtmp/publish-done", apiHandlers.RTMPPublishDoneHandler)
+	mux.HandleFunc("/api/rtmp/unpublished", apiHandlers.RTMPUnPublishedHandler)
 
 	mux.Handle("/api/generate-stream-key", middleware.ChainMiddleware(
 		http.HandlerFunc(apiHandlers.GenerateStreamKeyHandler),

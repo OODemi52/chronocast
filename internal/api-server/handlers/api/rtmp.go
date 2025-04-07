@@ -7,7 +7,7 @@ import (
 	"github.com/OODemi52/chronocast-server/internal/rtmp-server/auth"
 )
 
-func RTMPAuthHandler(w http.ResponseWriter, r *http.Request) {
+func RTMPPublishedHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
 		log.Printf("RTMP auth parse error: %v", err)
@@ -35,7 +35,7 @@ func RTMPAuthHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func RTMPPublishDoneHandler(w http.ResponseWriter, r *http.Request) {
+func RTMPUnPublishedHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err := r.ParseForm(); err != nil {
 		log.Printf("RTMP publish done parse error: %v", err)
