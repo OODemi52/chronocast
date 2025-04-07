@@ -142,7 +142,7 @@ func (srs *SimpleRealtimeServer) AddStream(key string, destinations []StreamDest
 		return fmt.Errorf("destinations cannot be empty")
 	}
 
-	log.Printf("Adding stream with key: %s and %d destinations", key, len(destinations))
+	log.Printf("Adding stream with key: %s and %d destinations...", key, len(destinations))
 
 	for i, dest := range destinations {
 		log.Printf("Destination %d: URL=%s, StreamKey=%s", i, dest.URL, dest.StreamKey)
@@ -203,7 +203,7 @@ func (srs *SimpleRealtimeServer) RemoveStream(key string) error {
 		return fmt.Errorf("stream key cannot be empty")
 	}
 
-	log.Printf("Removing stream with key: %s", key)
+	log.Printf("Removing stream with key: %s ...", key)
 
 	apiURL := fmt.Sprintf("http://localhost:1985/api/v1/streams/%s", key)
 
@@ -239,6 +239,11 @@ func (srs *SimpleRealtimeServer) RemoveStream(key string) error {
 }
 
 func (srs *SimpleRealtimeServer) GetIngestURL(streamKey string) string {
+
+	if streamKey == "" {
+		log.Println("Stream key is empty. Returning an empty ingest URL.")
+		return ""
+	}
 	//TODO - Make this work for production server and get the info dynamically
 	host := "localhost"
 
