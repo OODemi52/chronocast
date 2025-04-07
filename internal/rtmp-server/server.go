@@ -1,7 +1,6 @@
 package rtmpserver
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,7 +8,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 )
 
 type StreamDestination struct {
@@ -104,26 +102,29 @@ func (srs *SimpleRealtimeServer) Stop() error {
 
 func (srs *SimpleRealtimeServer) Reload() error {
 
-	log.Printf("Reloading RTMP server with %d streams configured...", len(srs.Streams))
+	log.Println("Reloading RTMP server configuration...")
 
-	// Add timeout context to prevent hanging
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	apiURL := "http://localhost:1985/api/v1/servers"
 
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, srs.SRSPath, "-s", "reload")
-
-	output, err := cmd.CombinedOutput()
+	req, err := http.NewRequest("PUT", apiURL, strings.NewReader(`{"action":"reload"}`))
 
 	if err != nil {
-
-		if ctx.Err() == context.DeadlineExceeded {
-			return fmt.Errorf("RTMP server reload timed out after 5 seconds")
-		}
-
-		return fmt.Errorf("failed to reload RTMP server with new configs: %v, output: %s", err, output)
-
+		return fmt.Errorf("failed to create reload request: %v", err)
 	}
+
+	resp, err := http.DefaultClient.Do(req)
+
+	if err != nil {
+		return fmt.Errorf("failed to reload RTMP server: %v", err)
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("RTMP server returned unexpected status during reload: %s", resp.Status)
+	}
+
+	log.Println("RTMP server configuration reloaded successfully.")
 
 	return nil
 
