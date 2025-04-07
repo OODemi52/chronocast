@@ -5,11 +5,13 @@ import (
 
 	rtmpserver "github.com/OODemi52/chronocast-server/internal/rtmp-server"
 	"github.com/OODemi52/chronocast-server/internal/services/factory"
+	"github.com/OODemi52/chronocast-server/internal/services/ffmpeg"
 	"github.com/OODemi52/chronocast-server/internal/types"
 )
 
 type MultiStreamService struct {
-	Platforms map[string]types.StreamPlatform
+	Platforms     map[string]types.StreamPlatform
+	FFmpegService *ffmpeg.FFmpegService
 }
 
 type PlatformResult struct {
@@ -39,12 +41,13 @@ func NewMultiStreamService() (*MultiStreamService, error) {
 	}
 
 	return &MultiStreamService{
-		Platforms: platforms,
+		Platforms:     platforms,
+		FFmpegService: ffmpeg.NewFFmpegService(),
 	}, nil
 
 }
 
-func (m *MultiStreamService) CreateMultiStream(platforms []string, options types.StreamOptions) ([]PlatformResult, error) {
+func (m *MultiStreamService) CreateMultiStream(platforms []string, options types.StreamOptions, inputStreamURL string) ([]PlatformResult, error) {
 
 	var results []PlatformResult
 
@@ -75,7 +78,19 @@ func (m *MultiStreamService) CreateMultiStream(platforms []string, options types
 			result.Error = err
 			errors = append(errors, fmt.Errorf("failed on %s: %w", platformName, err))
 		} else {
-			result.RTMPDestination = getRTMPDestination(platformName, response)
+			rtmpDestination := getRTMPDestination(platformName, response)
+
+			result.RTMPDestination = rtmpDestination
+
+			outputURL := fmt.Sprintf("%s%s", rtmpDestination.URL, rtmpDestination.StreamKey)
+
+			err := m.FFmpegService.StartProcess(fmt.Sprintf("%s:%s", options.Title, platformName), inputStreamURL, outputURL)
+
+			if err != nil {
+				result.Error = fmt.Errorf("failed to start FFmpeg for %s: %w", platformName, err)
+				errors = append(errors, result.Error)
+			}
+
 		}
 
 		results = append(results, result)
